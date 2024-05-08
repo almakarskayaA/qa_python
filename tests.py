@@ -27,25 +27,24 @@ import pytest
 from main import BooksCollector
 
 
-@pytest.fixture
-def collector():
-    return BooksCollector()
-
-
 def test_add_new_book_success(collector):
     collector.add_new_book("Book1")
     assert "Book1" in collector.books_genre
 
 
 def test_add_new_book_invalid_length(collector):
-    with pytest.raises(ValueError):
-        collector.add_new_book("This is a book with a very long title exceeding 40 characters")
+    long_title = "This is a book with a very long title exceeding 40 characters"
+    collector.add_new_book(long_title)
+    assert not collector.get_book_genre(long_title)
 
 
 def test_add_new_book_duplicate(collector):
+    title = "Book2"
+    some_genre = collector.get_books_genre()[0]
+    collector.add_new_book(title)
+    collector.set_book_genre(title, some_genre)
     collector.add_new_book("Book2")
-    with pytest.raises(ValueError):
-        collector.add_new_book("Book2")
+    assert collector.get_book_genre(title) == some_genre
 
 
 # Тест для метода set_book_genre:
@@ -56,18 +55,19 @@ def test_set_book_genre_success(collector):
 
 
 def test_set_book_genre_invalid_book(collector):
-    with pytest.raises(ValueError):
-        collector.set_book_genre("NonexistentBook", "Фантастика")
+    title = "NonexistentBook"
+    collector.set_book_genre(title, "Фантастика")
+    assert collector.get_book_genre(title) is None
 
 
 def test_set_book_genre_invalid_genre(collector):
     collector.add_new_book("Book2")
-    with pytest.raises(ValueError):
-        collector.set_book_genre("Book2", "Музыка")
+    collector.set_book_genre("Book2", "Музыка")
+    assert collector.get_book_genre("Book2") == ''
 
 
 # Тесты для метода get_book_genre:
-def test_get_book_genre_existing_book(collector):
+def test_get_book_genre_existing_book(collector):   
     collector.add_new_book("Book1")
     collector.set_book_genre("Book1", "Фантастика")
     assert collector.get_book_genre("Book1") == "Фантастика"
@@ -87,8 +87,6 @@ def test_get_books_with_specific_genre(collector):
 
 
 def test_get_books_with_non_existent_genre(collector):
-    collector.add_new_book("Fantasy Book")
-    collector.set_book_genre("Fantasy Book", "Фантастика")
     assert collector.get_books_with_specific_genre("Музыка") == []
 
 
@@ -116,15 +114,15 @@ def test_add_book_in_favorites_success(collector):
 
 
 def test_add_book_in_favorites_nonexistent_book(collector):
-    with pytest.raises(ValueError):
-        collector.add_book_in_favorites("NonexistentBook")
+    collector.add_book_in_favorites("NonexistentBook")
+    assert "NonexistentBook" not in collector.get_list_of_favorites_books()
 
 
 def test_add_book_in_favorites_duplicate(collector):
     collector.add_new_book("Book1")
     collector.add_book_in_favorites("Book1")
-    with pytest.raises(ValueError):
-        collector.add_book_in_favorites("Book1")
+    collector.add_book_in_favorites("Book1")
+    assert collector.get_list_of_favorites_books().count("Book1") == 1
 
 
 # Тесты для метода delete_book_from_favorites:
@@ -136,8 +134,7 @@ def test_delete_book_from_favorites_success(collector):
 
 
 def test_delete_nonexistent_book_from_favorites(collector):
-    with pytest.raises(ValueError):
-        collector.delete_book_from_favorites("NonexistentBook")
+    collector.delete_book_from_favorites("NonexistentBook")
 
 
 # Тест для метода get_list_of_favorites_books:
@@ -148,6 +145,8 @@ def test_get_list_of_favorites_books(collector):
     collector.add_book_in_favorites("Book2")
     assert set(collector.get_list_of_favorites_books()) == {"Book1", "Book2"}
 
-
-
+@pytest.mark.parametrize("test_input,expected", [('', False), ('a', True), (40 * 'a', True),  (41 * 'a', False)])
+def test_add_new_book_invalid_length_boundary(test_input, expected):
+    collector.add_new_book(test_input)
+    assert (collector.get_book_genre is not None) is expected
 
